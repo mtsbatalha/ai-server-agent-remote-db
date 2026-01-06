@@ -10,8 +10,7 @@ const ENV_EXAMPLE_FILE = path.join(PROJECT_ROOT, '.env.example');
 // Default ports we want to use
 const DEFAULT_PORTS = {
     WEB: 3000,
-    API: 3003, // Changed default to 3003
-    POSTGRES: 5433, // Non-default to avoid conflict with other projects (e.g., Grammarly)
+    API: 3001,
     REDIS: 6380, // Non-default to avoid conflict with other projects (e.g., Grammarly)
     OLLAMA: 11434
 };
@@ -85,11 +84,7 @@ async function main() {
     const apiPort = await findAvailablePort(DEFAULT_PORTS.API, 'API Server');
     envContent = updateEnvContent(envContent, 'API_HOST_PORT', apiPort);
 
-    // 3. Check Postgres Port
-    const pgPort = await findAvailablePort(DEFAULT_PORTS.POSTGRES, 'PostgreSQL');
-    envContent = updateEnvContent(envContent, 'POSTGRES_PORT', pgPort);
-
-    // 4. Check Redis Port
+    // 3. Check Redis Port
     const redisPort = await findAvailablePort(DEFAULT_PORTS.REDIS, 'Redis');
     envContent = updateEnvContent(envContent, 'REDIS_PORT', redisPort);
 
@@ -102,8 +97,8 @@ async function main() {
     // what is configured in the codebase (which we just set to 3003).
     // If the user's "3003" is ALSO taken, we found an alternative (e.g. 3004).
 
-    if (apiPort !== 3003) {
-        console.log(`\n⚠️  API Port is ${apiPort} (not default 3003). Updating configuration files...`);
+    if (apiPort !== 3001) {
+        console.log(`\n⚠️  API Port is ${apiPort} (not default 3001). Updating configuration files...`);
 
         // Update Web Dockerfile
         const webDockerfile = path.join(PROJECT_ROOT, 'apps/web/Dockerfile');

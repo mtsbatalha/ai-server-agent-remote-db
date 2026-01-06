@@ -38,20 +38,10 @@ fi
 echo "[1/5] Limpando ambiente..."
 
 # Remove conflicting environment variables
-if grep -q "^DATABASE_URL" .env 2>/dev/null; then
-    sed -i '/^DATABASE_URL/d' .env
-    echo -e "  ${YELLOW}⚠️  Removido DATABASE_URL do .env${NC}"
-fi
 if grep -q "^REDIS_URL" .env 2>/dev/null; then
     sed -i '/^REDIS_URL/d' .env
     echo -e "  ${YELLOW}⚠️  Removido REDIS_URL do .env${NC}"
 fi
-
-# Remove quotes from POSTGRES variables
-sed -i 's/POSTGRES_PASSWORD="\([^"]*\)"/POSTGRES_PASSWORD=\1/' .env 2>/dev/null
-sed -i "s/POSTGRES_PASSWORD='\([^']*\)'/POSTGRES_PASSWORD=\1/" .env 2>/dev/null
-sed -i 's/POSTGRES_USER="\([^"]*\)"/POSTGRES_USER=\1/' .env 2>/dev/null
-sed -i 's/POSTGRES_DB="\([^"]*\)"/POSTGRES_DB=\1/' .env 2>/dev/null
 
 echo -e "  ${GREEN}✅ Ambiente limpo${NC}"
 
@@ -66,7 +56,7 @@ $COMPOSE_CMD --env-file ../.env down 2>/dev/null
 cd ..
 
 # Clean up old volumes with wrong names
-OLD_VOLUMES=("docker_postgres_data" "docker_redis_data")
+OLD_VOLUMES=("docker_redis_data")
 for vol in "${OLD_VOLUMES[@]}"; do
     if docker volume ls -q | grep -q "^${vol}$"; then
         docker volume rm "$vol" 2>/dev/null && echo -e "  ${YELLOW}⚠️  Volume antigo removido: $vol${NC}"
@@ -76,49 +66,23 @@ done
 echo -e "  ${GREEN}✅ Containers parados${NC}"
 
 # ============================================
-# STEP 3: Start containers (without API first)
+# STEP 3: Start cache
 # ============================================
 echo ""
-echo "[3/5] Iniciando banco de dados..."
+echo "[3/5] Iniciando Redis..."
 
 cd docker
-# Start only postgres and redis first
-$COMPOSE_CMD --env-file ../.env up -d postgres redis
+# Start only redis
+$COMPOSE_CMD --env-file ../.env up -d redis
 cd ..
 
-# Wait for PostgreSQL
-echo -e "  Aguardando PostgreSQL..."
-MAX_WAIT=60
-WAITED=0
-while [ $WAITED -lt $MAX_WAIT ]; do
-    if docker exec ai-server-postgres pg_isready -U postgres &>/dev/null; then
-        break
-    fi
-    sleep 2
-    WAITED=$((WAITED + 2))
-done
-
-if ! docker exec ai-server-postgres pg_isready -U postgres &>/dev/null; then
-    echo -e "  ${RED}❌ PostgreSQL não iniciou${NC}"
-    exit 1
-fi
-
-echo -e "  ${GREEN}✅ PostgreSQL pronto${NC}"
+echo -e "  ${GREEN}✅ Redis pronto${NC}"
 
 # ============================================
-# STEP 4: Sync password and start API
+# STEP 4: Start API and Web
 # ============================================
 echo ""
-echo "[4/5] Sincronizando senha e iniciando API..."
-
-# Get password from .env
-POSTGRES_PASS=$(grep "^POSTGRES_PASSWORD" .env | cut -d'=' -f2 | tr -d '"' | tr -d "'")
-
-if [ -n "$POSTGRES_PASS" ]; then
-    # Sync password to running PostgreSQL
-    docker exec ai-server-postgres psql -U postgres -c "ALTER USER postgres WITH PASSWORD '${POSTGRES_PASS}';" &>/dev/null
-    echo -e "  ${GREEN}✅ Senha sincronizada${NC}"
-fi
+echo "[4/5] Iniciando API e Web..."
 
 # Now start API and Web
 cd docker
@@ -166,17 +130,9 @@ echo " 📊 STATUS FINAL"
 echo "--------------------------------------------------------------------"
 
 # Check each service
-POSTGRES_OK=false
 REDIS_OK=false
 API_OK=false
 WEB_OK=false
-
-if docker exec ai-server-postgres pg_isready -U postgres &>/dev/null; then
-    echo -e "  PostgreSQL:  ${GREEN}✅ Rodando${NC}"
-    POSTGRES_OK=true
-else
-    echo -e "  PostgreSQL:  ${RED}❌ Parado${NC}"
-fi
 
 if docker exec ai-server-redis redis-cli ping &>/dev/null; then
     echo -e "  Redis:       ${GREEN}✅ Rodando${NC}"
@@ -201,18 +157,18 @@ fi
 
 echo ""
 echo "--------------------------------------------------------------------"
-if $POSTGRES_OK && $REDIS_OK && $API_OK && $WEB_OK; then
+if $REDIS_OK && $API_OK && $WEB_OK; then
     echo -e " ${GREEN}✅ TODOS OS SERVIÇOS RODANDO!${NC}"
     
     # Get actual ports from .env
-    API_PORT=$(grep "^API_HOST_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "3003")
-    WEB_PORT=$(grep "^WEB_HOST_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "3000")
+    API_PORT=$(grep "^API_HOST_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "3001")
+    WEB_PORT=$(grep "^WEB_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "3000")
     
     echo ""
     echo " 📋 URLs disponíveis:"
     echo "  Frontend:   http://localhost:${WEB_PORT:-3000}"
-    echo "  Backend:    http://localhost:${API_PORT:-3003}"
-    echo "  API Docs:   http://localhost:${API_PORT:-3003}/api/docs"
+    echo "  Backend:    http://localhost:${API_PORT:-3001}"
+    echo "  API Docs:   http://localhost:${API_PORT:-3001}/api/docs"
 else
     echo -e " ${YELLOW}⚠️  Alguns serviços estão parados${NC}"
     echo ""
