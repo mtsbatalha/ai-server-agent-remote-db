@@ -61,24 +61,8 @@ echo -e "  ${GREEN}✅ Containers Docker iniciados${NC}"
 echo ""
 echo "[2/2] Aguardando serviços ficarem prontos..."
 
-MAX_WAIT=30
-WAITED=0
-while [ $WAITED -lt $MAX_WAIT ]; do
-    if docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; then
-        break
-    fi
-    sleep 2
-    WAITED=$((WAITED + 2))
-done
-
-# Check PostgreSQL
-if docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; then
-    echo -e "  ${GREEN}✅ PostgreSQL pronto${NC}"
-else
-    echo -e "  ${YELLOW}⚠️  PostgreSQL ainda iniciando...${NC}"
-fi
-
 # Check Redis
+sleep 3
 if docker exec ai-server-redis redis-cli ping &> /dev/null; then
     echo -e "  ${GREEN}✅ Redis pronto${NC}"
 else
