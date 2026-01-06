@@ -81,13 +81,13 @@ echo -e "${BOLD}[2/6] Parando e removendo containers Docker...${NC}"
 if command -v docker &> /dev/null; then
     if docker info &> /dev/null; then
         # Stop containers
-        docker stop ai-server-postgres ai-server-redis ai-server-api ai-server-web 2>/dev/null
-        docker stop ai-server-postgres-dev ai-server-redis-dev 2>/dev/null
+        docker stop ai-server-redis ai-server-api ai-server-web 2>/dev/null
+        docker stop ai-server-redis-dev 2>/dev/null
         echo -e "   ${GREEN}✅ Containers parados${NC}"
         
         # Remove containers
-        docker rm ai-server-postgres ai-server-redis ai-server-api ai-server-web 2>/dev/null
-        docker rm ai-server-postgres-dev ai-server-redis-dev 2>/dev/null
+        docker rm ai-server-redis ai-server-api ai-server-web 2>/dev/null
+        docker rm ai-server-redis-dev 2>/dev/null
         echo -e "   ${GREEN}✅ Containers removidos${NC}"
     else
         echo -e "   ${YELLOW}⚠️  Docker não está rodando - pulando containers${NC}"
@@ -100,17 +100,14 @@ fi
 # 3. REMOVER VOLUMES DOCKER
 # ============================================
 echo ""
-echo -e "${BOLD}[3/6] Removendo volumes Docker (dados do banco)...${NC}"
+echo -e "${BOLD}[3/6] Removendo volumes Docker...${NC}"
 
 if command -v docker &> /dev/null && docker info &> /dev/null; then
-    docker volume rm ai-server-postgres-data 2>/dev/null
-    docker volume rm docker_postgres_data 2>/dev/null
     docker volume rm docker_redis_data 2>/dev/null
-    docker volume rm docker_postgres_data_dev 2>/dev/null
     docker volume rm docker_redis_data_dev 2>/dev/null
     
     # Also try with project prefix variations
-    for vol in $(docker volume ls -q --filter "name=ai-server" 2>/dev/null); do
+    for vol in $(docker volume ls -q --filter "name=ai-server-redis" 2>/dev/null); do
         docker volume rm "$vol" 2>/dev/null
     done
     

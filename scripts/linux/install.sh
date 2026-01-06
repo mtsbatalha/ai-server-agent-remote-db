@@ -243,14 +243,9 @@ if [ -z "$CURRENT_ENC" ] || echo "$CURRENT_ENC" | grep -qiE "your|change|placeho
 fi
 
 if [ "$NEEDS_JWT" = true ] || [ "$NEEDS_ENC" = true ]; then
-    # Remove DATABASE_URL and REDIS_URL (Docker generates these automatically from POSTGRES_* vars)
-    sed -i '/^DATABASE_URL/d' .env
-    sed -i '/^REDIS_URL/d' .env
     # Remove any existing/corrupted entries
     sed -i '/^JWT_SECRET/d' .env
     sed -i '/^ENCRYPTION_KEY/d' .env
-    sed -i 's/\(API_HOST_PORT=[0-9]*\)JWT_SECRET.*/\1/' .env
-    sed -i 's/\(API_HOST_PORT=[0-9]*\)ENCRYPTION_KEY.*/\1/' .env
     
     # Generate new keys
     NEW_JWT_SECRET=$(openssl rand -base64 32)
@@ -280,22 +275,6 @@ cd docker
 $COMPOSE_CMD up -d
 cd ..
 echo -e "  ${GREEN}✅ Containers Docker iniciados${NC}"
-
-# Wait for PostgreSQL
-echo ""
-echo "Aguardando PostgreSQL ficar pronto..."
-counter=0
-while ! docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; do
-    counter=$((counter + 1))
-    if [ $counter -ge 30 ]; then
-        echo -e "  ${RED}❌ Timeout aguardando PostgreSQL${NC}"
-        exit 1
-    fi
-    sleep 1
-    echo -n "."
-done
-echo ""
-echo -e "  ${GREEN}✅ PostgreSQL pronto!${NC}"
 
 # Configure Prisma
 echo ""
@@ -327,11 +306,10 @@ echo "   - Node.js: $NODE_VERSION"
 echo "   - pnpm: v$PNPM_VERSION"
 echo "   - Docker: v$DOCKER_VERSION"
 echo "   - Docker Compose"
-echo "   - PostgreSQL (container)"
 echo "   - Redis (container)"
 echo ""
 echo " Próximos passos:"
-echo "   1. Edite o arquivo .env com suas chaves de API"
+echo "   1. Edite o arquivo .env com sua DATABASE_URL remota"
 echo "   2. Execute ./scripts/linux/start.sh para iniciar o projeto"
 echo ""
 echo " URLs:"

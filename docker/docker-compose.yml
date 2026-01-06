@@ -1,28 +1,5 @@
 services:
   # ===========================================
-  # DATABASE
-  # ===========================================
-  postgres:
-    image: postgres:16-alpine
-    container_name: ai-server-postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-aiserver_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aiserver_secret_2024}
-      POSTGRES_DB: ${POSTGRES_DB:-aiserver_db}
-    ports:
-      - "${POSTGRES_PORT:-5433}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aiserver_user}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - ai-server-network
-    restart: unless-stopped
-
-  # ===========================================
   # CACHE
   # ===========================================
   redis:
@@ -52,7 +29,7 @@ services:
     container_name: ai-server-api
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-aiserver_user}:${POSTGRES_PASSWORD:-aiserver_secret_2024}@ai-server-postgres:5432/${POSTGRES_DB:-aiserver_db}?schema=public
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
@@ -75,8 +52,6 @@ services:
       # HOST_PORT:CONTAINER_PORT - Container always uses 3001
       - "${API_HOST_PORT:-3003}:3001"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -124,9 +99,6 @@ services:
 # VOLUMES
 # ===========================================
 volumes:
-  postgres_data:
-    driver: local
-    name: ai-server-postgres-data
   redis_data:
     driver: local
     name: ai-server-redis-data

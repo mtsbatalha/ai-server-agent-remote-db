@@ -103,24 +103,6 @@ if %ERRORLEVEL% NEQ 0 (
 cd ..
 echo   ✅ Containers Docker iniciados
 
-:: Wait for PostgreSQL
-echo.
-echo Aguardando PostgreSQL ficar pronto...
-set /a counter=0
-:wait_pg
-docker exec ai-server-postgres pg_isready -U postgres >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    set /a counter+=1
-    if %counter% GEQ 30 (
-        echo   ❌ Timeout aguardando PostgreSQL
-        pause
-        exit /b 1
-    )
-    timeout /t 1 /nobreak >nul
-    goto wait_pg
-)
-echo   ✅ PostgreSQL pronto!
-
 :: Configure Prisma
 echo.
 echo Configurando banco de dados...
@@ -140,7 +122,7 @@ echo   ✅ INSTALACAO CONCLUIDA COM SUCESSO!
 echo  ====================================================
 echo.
 echo  Proximos passos:
-echo    1. Edite o arquivo .env com suas chaves de API
+echo    1. Edite o arquivo .env com sua DATABASE_URL remota
 echo    2. Execute start.bat para iniciar o projeto
 echo.
 echo  URLs:

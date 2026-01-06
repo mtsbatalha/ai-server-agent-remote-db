@@ -82,13 +82,13 @@ if %ERRORLEVEL% EQU 0 (
     docker info >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
         :: Stop containers
-        docker stop ai-server-postgres ai-server-redis ai-server-api ai-server-web >nul 2>nul
-        docker stop ai-server-postgres-dev ai-server-redis-dev >nul 2>nul
+        docker stop ai-server-redis ai-server-api ai-server-web >nul 2>nul
+        docker stop ai-server-redis-dev >nul 2>nul
         echo   ✅ Containers parados
         
         :: Remove containers
-        docker rm ai-server-postgres ai-server-redis ai-server-api ai-server-web >nul 2>nul
-        docker rm ai-server-postgres-dev ai-server-redis-dev >nul 2>nul
+        docker rm ai-server-redis ai-server-api ai-server-web >nul 2>nul
+        docker rm ai-server-redis-dev >nul 2>nul
         echo   ✅ Containers removidos
     ) else (
         echo   ⚠️  Docker Desktop nao esta rodando - pulando containers
@@ -101,20 +101,17 @@ if %ERRORLEVEL% EQU 0 (
 :: 3. REMOVER VOLUMES DOCKER
 :: ============================================
 echo.
-echo [3/6] Removendo volumes Docker (dados do banco)...
+echo [3/6] Removendo volumes Docker...
 
 where docker >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
     docker info >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
-        docker volume rm ai-server-postgres-data >nul 2>nul
-        docker volume rm docker_postgres_data >nul 2>nul
         docker volume rm docker_redis_data >nul 2>nul
-        docker volume rm docker_postgres_data_dev >nul 2>nul
         docker volume rm docker_redis_data_dev >nul 2>nul
         
         :: Also try with project prefix variations
-        for /f "tokens=*" %%v in ('docker volume ls -q --filter "name=ai-server" 2^>nul') do (
+        for /f "tokens=*" %%v in ('docker volume ls -q --filter "name=ai-server-redis" 2^>nul') do (
             docker volume rm %%v >nul 2>nul
         )
         
