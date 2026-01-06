@@ -181,15 +181,19 @@ echo -e " ${BOLD}🌐 URLs DE ACESSO${NC}"
 echo "------------------------------------------------------------------------"
 echo ""
 
-if [ -n "$WEB_PID_VAL" ]; then
+# Check if containers are running to show URLs
+WEB_RUNNING=$(docker ps --filter "name=ai-server-web" --format "{{.Status}}" 2>/dev/null | grep -q "Up" && echo "yes")
+API_RUNNING=$(docker ps --filter "name=ai-server-api" --format "{{.Status}}" 2>/dev/null | grep -q "Up" && echo "yes")
+
+if [ -n "$WEB_RUNNING" ]; then
     echo "   Frontend:     http://localhost:3000"
 else
     echo "   Frontend:     [NÃO DISPONÍVEL]"
 fi
 
-if [ -n "$API_PID_VAL" ]; then
-    echo "   Backend API:  http://localhost:3001"
-    echo "   API Docs:     http://localhost:3001/api/docs"
+if [ -n "$API_RUNNING" ]; then
+    echo "   Backend API:  http://localhost:3000/api"
+    echo "   API Docs:     http://localhost:3000/api/docs"
 else
     echo "   Backend API:  [NÃO DISPONÍVEL]"
     echo "   API Docs:     [NÃO DISPONÍVEL]"
