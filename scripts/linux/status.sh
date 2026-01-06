@@ -34,7 +34,7 @@ echo "------------------------------------------------------------------------"
 echo ""
 
 # Try to check database status via API health endpoint
-API_URL="http://localhost:3001/api/health/db"
+API_URL="http://localhost:3000/api/health/db"
 DB_STATUS="Desconhecido"
 DB_LATENCY="-"
 DB_HOST="-"
