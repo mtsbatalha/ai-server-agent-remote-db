@@ -88,25 +88,23 @@ else
         printf "   %-22s %-16s %-14s %-10s\n" "Container" "Status" "Porta" "Health"
         printf "   %-22s %-16s %-14s %-10s\n" "--------------------" "--------------" "------------" "--------"
 
-        # PostgreSQL Status
-        PG_STATUS="${RED}❌ Parado${NC}"
-        PG_PORT="-"
-        PG_HEALTH="-"
+        # Redis Status
+        REDIS_STATUS="${RED}❌ Parado${NC}"
+        REDIS_PORT="-"
+        REDIS_HEALTH="-"
 
-        if docker ps --filter "name=ai-server-postgres" --format "{{.Status}}" 2>/dev/null | grep -q .; then
-            PG_STATUS="${GREEN}✅ Rodando${NC}"
-            PG_PORT="5433"
-            if docker exec ai-server-postgres pg_isready -U postgres &> /dev/null; then
-                PG_HEALTH="Healthy"
+        if docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
+            REDIS_STATUS="${GREEN}✅ Rodando${NC}"
+            REDIS_PORT="6380"
+            if docker exec ai-server-redis redis-cli ping &> /dev/null; then
+                REDIS_HEALTH="Healthy"
             else
-                PG_HEALTH="Starting"
+                REDIS_HEALTH="Starting"
             fi
         fi
 
-        printf "   %-22s " "PostgreSQL"
-        echo -e "$PG_STATUS      $PG_PORT          $PG_HEALTH"
-
-        # Redis Status
+        printf "   %-22s " "Redis"
+        echo -e "$REDIS_STATUS      $REDIS_PORT          $REDIS_HEALTH"
         REDIS_STATUS="${RED}❌ Parado${NC}"
         REDIS_PORT="-"
         REDIS_HEALTH="-"
@@ -242,12 +240,6 @@ echo "------------------------------------------------------------------------"
 echo -e " ${BOLD}📜 LOGS RECENTES DOS CONTAINERS${NC}"
 echo "------------------------------------------------------------------------"
 
-if docker ps --filter "name=ai-server-postgres" --format "{{.Status}}" 2>/dev/null | grep -q .; then
-    echo ""
-    echo "   [PostgreSQL - Últimas 3 linhas]"
-    docker logs ai-server-postgres --tail 3 2>&1 | sed 's/^/   /'
-fi
-
 if docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
     echo ""
     echo "   [Redis - Últimas 3 linhas]"
@@ -272,13 +264,12 @@ echo "========================================================================"
 echo -e " ${BOLD}📊 RESUMO${NC}"
 echo "========================================================================"
 
-TOTAL_SERVICES=4
+TOTAL_SERVICES=3
 RUNNING_SERVICES=0
 
-docker ps --filter "name=ai-server-postgres" --format "{{.Status}}" 2>/dev/null | grep -q . && ((RUNNING_SERVICES++))
 docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q . && ((RUNNING_SERVICES++))
-[ -n "$WEB_PID_VAL" ] && ((RUNNING_SERVICES++))
-[ -n "$API_PID_VAL" ] && ((RUNNING_SERVICES++))
+docker ps --filter "name=ai-server-api" --format "{{.Status}}" 2>/dev/null | grep -q . && ((RUNNING_SERVICES++))
+docker ps --filter "name=ai-server-web" --format "{{.Status}}" 2>/dev/null | grep -q . && ((RUNNING_SERVICES++))
 
 echo ""
 if [ $RUNNING_SERVICES -eq $TOTAL_SERVICES ]; then
