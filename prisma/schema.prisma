@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../apps/api/node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(USER)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  servers       Server[]
+  executions    Execution[]
+  auditLogs     AuditLog[]
+  chatSessions  ChatSession[]
+
+  @@index([email])
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  USER
+  READONLY
+}
+
+// ============================================
+// SERVER MANAGEMENT
+// ============================================
+
+model Server {
+  id              String         @id @default(uuid())
+  name            String
+  description     String?
+  host            String
+  port            Int            @default(22)
+  username        String
+  authType        AuthType
+  privateKey      String?        @db.Text // Encrypted
+  password        String?        // Encrypted
+  passphrase      String?        // Encrypted
+  fingerprint     String?        // SSH host fingerprint
+  status          ServerStatus   @default(DISCONNECTED)
+  lastConnection  DateTime?
+  tags            String[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions      Execution[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("servers")
+}
+
+enum AuthType {
+  PASSWORD
+  KEY
+}
+
+enum ServerStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+// ============================================
+// COMMAND EXECUTION
+// ============================================
+
+model Execution {
+  id            String           @id @default(uuid())
+  prompt        String           @db.Text
+  plan          Json?            // AI-generated plan
+  commands      Json             // List of commands to execute
+  output        String?          @db.Text
+  error         String?          @db.Text
+  status        ExecutionStatus
+  dryRun        Boolean          @default(false)
+  confirmed     Boolean          @default(false)
+  riskLevel     RiskLevel        @default(LOW)
+  executedAt    DateTime?
+  completedAt   DateTime?
+  duration      Int?             // Execution duration in ms
+  createdAt     DateTime         @default(now())
+
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serverId      String
+  server        Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  auditLogs     AuditLog[]
+
+  @@index([userId])
+  @@index([serverId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("executions")
+}
+
+enum ExecutionStatus {
+  PENDING
+  PLANNING
+  VALIDATING
+  AWAITING_CONFIRMATION
+  EXECUTING
+  COMPLETED
+  FAILED
+  CANCELLED
+  BLOCKED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ============================================
+// AUDIT & LOGGING
+// ============================================
+
+model AuditLog {
+  id            String    @id @default(uuid())
+  action        String
+  resource      String
+  resourceId    String?
+  details       Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executionId   String?
+  execution     Execution? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
+// TEMPLATES
+// ============================================
+
+model CommandTemplate {
+  id            String    @id @default(uuid())
+  name          String
+  description   String
+  category      String
+  icon          String?
+  commands      Json      // Array of command templates
+  variables     Json?     // Variables that can be customized
+  isPublic      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([category])
+  @@index([isPublic])
+  @@map("command_templates")
+}
+
+// ============================================
+// CHAT SESSIONS (History)
+// ============================================
+
+model ChatSession {
+  id            String    @id @default(uuid())
+  title         String?
+  messages      Json      // Array of chat messages
+  serverId      String
+  serverName    String    // Denormalized for quick display
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("chat_sessions")
+}

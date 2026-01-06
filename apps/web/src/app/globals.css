@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 14%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* Terminal styling */
+.terminal {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.terminal-output {
+  @apply font-mono text-sm leading-relaxed;
+}
+
+.terminal-prompt {
+  @apply text-terminal-green;
+}
+
+.terminal-error {
+  @apply text-terminal-red;
+}
+
+.terminal-warning {
+  @apply text-terminal-yellow;
+}
+
+.terminal-info {
+  @apply text-terminal-blue;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-secondary;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
+
+/* Glowing effects */
+.glow {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+/* Animation for typing effect */
+.typing-cursor::after {
+  content: '▋';
+  @apply animate-blink text-primary;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent;
+}
+
+/* Card hover effect */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-0.5;
+}
+
+/* Status badges */
+.status-connected {
+  @apply bg-green-500/20 text-green-400 border-green-500/30;
+}
+
+.status-disconnected {
+  @apply bg-gray-500/20 text-gray-400 border-gray-500/30;
+}
+
+.status-error {
+  @apply bg-red-500/20 text-red-400 border-red-500/30;
+}
+
+/* Risk level badges */
+.risk-low {
+  @apply bg-green-500/20 text-green-400;
+}
+
+.risk-medium {
+  @apply bg-yellow-500/20 text-yellow-400;
+}
+
+.risk-high {
+  @apply bg-orange-500/20 text-orange-400;
+}
+
+.risk-critical {
+  @apply bg-red-500/20 text-red-400;
+}

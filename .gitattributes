@@ -1,0 +1,23 @@
+# Enforce LF line endings for shell scripts to prevent errors on Linux
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# Standard text files
+*.md text
+*.json text
+*.yaml text
+*.yml text
+*.js text
+*.ts text
+*.tsx text
+*.css text
+*.html text
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
