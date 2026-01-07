@@ -386,14 +386,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             let fullOutput = '';
             const exitCodes: (number | null)[] = [];
 
-            for (const command of commands) {
+            for (let i = 0; i < commands.length; i++) {
+                const command = commands[i];
                 client.emit('output', { executionId, type: 'command', content: `$ ${command}` });
 
-                const result = await this.sshService.executeCommand(
+                let result = await this.sshService.executeCommand(
                     execution.serverId,
                     command,
                     credentials,
                 );
+
+                // If connection error detected, try reconnecting
+                if (!result.success && this.isConnectionLostError(result.stderr)) {
+                    result = await this.retryWithReconnect(
+                        execution.serverId,
+                        command,
+                        credentials,
+                        client,
+                        executionId,
+                    );
+                }
 
                 exitCodes.push(result.code);
 
@@ -463,6 +475,84 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             client.emit('error', { executionId, message: error.message });
         }
+    }
+
+    /**
+     * Detect if error is connection-related
+     */
+    private isConnectionLostError(errorMessage: string): boolean {
+        const connectionErrors = [
+            'ECONNRESET',
+            'ECONNREFUSED',
+            'ETIMEDOUT',
+            'EPIPE',
+            'socket hang up',
+            'Connection lost',
+            'connection lost',
+            'Not connected',
+            'Reconnection failed',
+            'Connection failed',
+        ];
+        return connectionErrors.some(err => errorMessage.includes(err));
+    }
+
+    /**
+     * Retry command execution with reconnect attempts
+     */
+    private async retryWithReconnect(
+        serverId: string,
+        command: string,
+        credentials: any,
+        client: AuthenticatedSocket,
+        executionId: string,
+    ): Promise<{ stdout: string; stderr: string; code: number | null; success: boolean }> {
+        const MAX_RECONNECT_ATTEMPTS = 6; // 6 attempts * 10s = 1 minute max wait
+        const RECONNECT_INTERVAL_MS = 10000; // 10 seconds
+
+        for (let attempt = 1; attempt <= MAX_RECONNECT_ATTEMPTS; attempt++) {
+            client.emit('reconnecting', {
+                executionId,
+                attempt,
+                maxAttempts: MAX_RECONNECT_ATTEMPTS,
+                message: `Servidor não responde. Tentando reconectar (${attempt}/${MAX_RECONNECT_ATTEMPTS})...`,
+            });
+
+            this.logger.warn(`Reconnect attempt ${attempt}/${MAX_RECONNECT_ATTEMPTS} for server ${serverId}`);
+
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, RECONNECT_INTERVAL_MS));
+
+            // Disconnect old connection
+            await this.sshService.disconnect(serverId);
+
+            // Try to reconnect and execute
+            try {
+                const result = await this.sshService.executeCommand(serverId, command, credentials);
+
+                if (result.success || !this.isConnectionLostError(result.stderr)) {
+                    client.emit('reconnected', {
+                        executionId,
+                        message: 'Conexão restabelecida!',
+                    });
+                    return result;
+                }
+            } catch (error) {
+                this.logger.warn(`Reconnect attempt ${attempt} failed: ${error.message}`);
+            }
+        }
+
+        // All attempts failed
+        client.emit('reconnect-failed', {
+            executionId,
+            message: 'Falha ao reconectar ao servidor após múltiplas tentativas.',
+        });
+
+        return {
+            stdout: '',
+            stderr: 'Falha ao reconectar ao servidor após múltiplas tentativas.',
+            code: -1,
+            success: false,
+        };
     }
 
     @SubscribeMessage('chat')

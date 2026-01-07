@@ -173,6 +173,29 @@ export default function DashboardPage() {
                     setProcessing(false);
                 });
 
+                // Reconnection events
+                socket.on('reconnecting', (data) => {
+                    addMessage({
+                        type: 'system',
+                        content: `🔄 ${data.message}`,
+                    });
+                });
+
+                socket.on('reconnected', (data) => {
+                    addMessage({
+                        type: 'system',
+                        content: `✅ ${data.message}`,
+                    });
+                });
+
+                socket.on('reconnect-failed', (data) => {
+                    addMessage({
+                        type: 'error',
+                        content: `❌ ${data.message}`,
+                    });
+                    setProcessing(false);
+                });
+
             } catch (error) {
                 console.error('Socket connection failed:', error);
             }
