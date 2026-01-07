@@ -19,6 +19,8 @@ import {
     History,
     MessageSquarePlus,
     Trash2,
+    MessageCircle,
+    SquareTerminal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +31,7 @@ import { useChatStore, Message, ChatSession } from '@/stores/chat-store';
 import { serversApi } from '@/lib/api';
 import { getSocket, connectSocket, disconnectSocket } from '@/lib/socket';
 import { DbStatus } from '@/components/ui/db-status';
+import { TerminalPanel } from '@/components/ui/terminal-panel';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -40,6 +43,7 @@ export default function DashboardPage() {
     const [prompt, setPrompt] = useState('');
     const [showAddServer, setShowAddServer] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [viewMode, setViewMode] = useState<'chat' | 'terminal'>('chat');
     const [blockedExecution, setBlockedExecution] = useState<{
         executionId: string;
         blockedCommands: string[];
@@ -350,6 +354,28 @@ export default function DashboardPage() {
                                         <History className="h-4 w-4 mr-1" />
                                         Histórico
                                     </Button>
+                                    <div className="flex items-center border border-border rounded-md overflow-hidden">
+                                        <button
+                                            onClick={() => setViewMode('chat')}
+                                            className={`px-3 py-1.5 text-sm flex items-center gap-1 transition-colors ${viewMode === 'chat'
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'hover:bg-secondary'
+                                                }`}
+                                        >
+                                            <MessageCircle className="h-3.5 w-3.5" />
+                                            Chat
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('terminal')}
+                                            className={`px-3 py-1.5 text-sm flex items-center gap-1 transition-colors ${viewMode === 'terminal'
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'hover:bg-secondary'
+                                                }`}
+                                        >
+                                            <SquareTerminal className="h-3.5 w-3.5" />
+                                            Terminal
+                                        </button>
+                                    </div>
                                     {isConnected ? (
                                         <Button size="sm" variant="outline" onClick={disconnect}>
                                             <Unplug className="h-4 w-4 mr-1" />
@@ -424,6 +450,13 @@ export default function DashboardPage() {
                                     Escolha um servidor na barra lateral para começar
                                 </p>
                             </div>
+                        </div>
+                    ) : viewMode === 'terminal' ? (
+                        <div className="h-full">
+                            <TerminalPanel
+                                serverId={selectedServer.id}
+                                serverName={selectedServer.name}
+                            />
                         </div>
                     ) : messages.length === 0 ? (
                         <div className="h-full flex items-center justify-center">

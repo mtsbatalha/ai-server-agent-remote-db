@@ -10,6 +10,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { HealthModule } from './modules/health/health.module';
+import { TerminalModule } from './modules/terminal/terminal.module';
 
 @Module({
     imports: [
@@ -27,6 +28,7 @@ import { HealthModule } from './modules/health/health.module';
         AiModule,
         AuditModule,
         ChatModule,
+        TerminalModule,
     ],
 })
 export class AppModule { }
