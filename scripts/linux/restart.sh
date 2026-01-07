@@ -2,7 +2,7 @@
 
 # ============================================
 # AI Server Admin - Restart Script
-# Reinicia todos os serviços e corrige problemas
+# Com suporte a Smart Docker Scaling
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,7 +12,12 @@ PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m'
+
+# Import hybrid detection functions
+source "$SCRIPT_DIR/docker-hybrid.sh"
 
 cd "$PROJECT_DIR"
 
@@ -21,6 +26,9 @@ echo "===================================================================="
 echo " 🖥️  AI SERVER ADMIN - REINICIAR SERVIÇOS"
 echo "===================================================================="
 echo ""
+
+# Load environment variables
+load_env "$PROJECT_DIR"
 
 # Check for docker-compose or docker compose
 if command -v docker-compose &> /dev/null; then
@@ -33,14 +41,23 @@ else
 fi
 
 # ============================================
+# SMART DOCKER SCALING - Detecção Híbrida
+# ============================================
+log_hybrid_status
+log_required_containers
+
+# Get required services
+REQUIRED_SERVICES=$(get_required_services)
+
+# ============================================
 # STEP 1: Clean environment
 # ============================================
 echo "[1/5] Limpando ambiente..."
 
 # Remove conflicting environment variables
-if grep -q "^REDIS_URL" .env 2>/dev/null; then
-    sed -i '/^REDIS_URL/d' .env
-    echo -e "  ${YELLOW}⚠️  Removido REDIS_URL do .env${NC}"
+if grep -q "^REDIS_URL" .env 2>/dev/null && ! is_remote_url "$(grep '^REDIS_URL' .env | cut -d'=' -f2- | tr -d '"')"; then
+    # Only remove if it's a local URL (keep remote URLs)
+    :
 fi
 
 echo -e "  ${GREEN}✅ Ambiente limpo${NC}"
@@ -55,28 +72,33 @@ cd docker
 $COMPOSE_CMD --env-file ../.env down 2>/dev/null
 cd ..
 
-# Clean up old volumes with wrong names
-OLD_VOLUMES=("docker_redis_data")
-for vol in "${OLD_VOLUMES[@]}"; do
-    if docker volume ls -q | grep -q "^${vol}$"; then
-        docker volume rm "$vol" 2>/dev/null && echo -e "  ${YELLOW}⚠️  Volume antigo removido: $vol${NC}"
-    fi
-done
-
 echo -e "  ${GREEN}✅ Containers parados${NC}"
 
 # ============================================
-# STEP 3: Start cache
+# STEP 3: Start required services
 # ============================================
 echo ""
-echo "[3/5] Iniciando Redis..."
+echo "[3/5] Iniciando serviços necessários..."
 
-cd docker
-# Start only redis
-$COMPOSE_CMD --env-file ../.env up -d redis
-cd ..
-
-echo -e "  ${GREEN}✅ Redis pronto${NC}"
+if [ -n "$REQUIRED_SERVICES" ]; then
+    cd docker
+    $COMPOSE_CMD --env-file ../.env up -d $REQUIRED_SERVICES
+    cd ..
+    
+    # Wait for services
+    sleep 3
+    
+    if needs_docker_redis; then
+        if docker exec ai-server-redis-dev redis-cli ping &>/dev/null; then
+            echo -e "  ${GREEN}✅ Redis local pronto${NC}"
+        else
+            echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"
+        fi
+    fi
+else
+    echo -e "  ${GREEN}✅ Nenhum container Docker necessário${NC}"
+    echo "     Todos os serviços estão configurados como remotos."
+fi
 
 # ============================================
 # STEP 4: Start API and Web
@@ -84,9 +106,8 @@ echo -e "  ${GREEN}✅ Redis pronto${NC}"
 echo ""
 echo "[4/5] Iniciando API e Web..."
 
-# Now start API and Web
 cd docker
-$COMPOSE_CMD --env-file ../.env up -d api web
+$COMPOSE_CMD --env-file ../.env up -d api web 2>/dev/null || true
 cd ..
 
 # Wait for API to be healthy
@@ -134,11 +155,17 @@ REDIS_OK=false
 API_OK=false
 WEB_OK=false
 
-if docker exec ai-server-redis redis-cli ping &>/dev/null; then
-    echo -e "  Redis:       ${GREEN}✅ Rodando${NC}"
-    REDIS_OK=true
+# Redis check
+if needs_docker_redis; then
+    if docker exec ai-server-redis-dev redis-cli ping &>/dev/null; then
+        echo -e "  Redis:       ${GREEN}✅ Rodando (Local)${NC}"
+        REDIS_OK=true
+    else
+        echo -e "  Redis:       ${RED}❌ Parado${NC}"
+    fi
 else
-    echo -e "  Redis:       ${RED}❌ Parado${NC}"
+    echo -e "  Redis:       ${GREEN}✅ Remoto${NC}"
+    REDIS_OK=true
 fi
 
 if docker ps --filter "name=ai-server-api" --format "{{.Status}}" | grep -q "Up"; then

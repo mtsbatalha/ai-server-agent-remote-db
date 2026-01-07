@@ -2,6 +2,7 @@
 
 # ============================================
 # AI Server Admin - Reset Script (FULL CLEANUP)
+# Com suporte a Smart Docker Scaling
 # ============================================
 # WARNING: This script will DELETE ALL DATA including database!
 # Use this only for fresh installations or when you need to start over.
@@ -16,6 +17,9 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
+
+# Import hybrid detection functions
+source "$SCRIPT_DIR/docker-hybrid.sh"
 
 cd "$PROJECT_DIR"
 
@@ -39,6 +43,9 @@ fi
 
 echo ""
 
+# Load environment variables
+load_env "$PROJECT_DIR"
+
 # Check for docker compose command
 if command -v docker-compose &> /dev/null; then
     COMPOSE_CMD="docker-compose"
@@ -48,6 +55,15 @@ else
     echo -e "  ${RED}❌ Docker Compose não encontrado.${NC}"
     exit 1
 fi
+
+# ============================================
+# SMART DOCKER SCALING - Detecção Híbrida
+# ============================================
+log_hybrid_status
+log_required_containers
+
+# Get required services
+REQUIRED_SERVICES=$(get_required_services)
 
 # Kill any rogue local processes
 echo "[1/7] Parando processos locais..."
@@ -85,10 +101,6 @@ NEW_ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 # Update .env file - remove conflicting entries and add new secrets
 if [ -f ".env" ]; then
-# Update .env file - remove conflicting entries and add new secrets
-if [ -f ".env" ]; then
-    # Remove REDIS_URL (Docker generates this automatically)
-    sed -i '/^REDIS_URL/d' .env
     # Remove any existing JWT_SECRET and ENCRYPTION_KEY lines
     sed -i '/^JWT_SECRET/d' .env
     sed -i '/^ENCRYPTION_KEY/d' .env
@@ -109,27 +121,38 @@ else
     exit 1
 fi
 
-# Start fresh
+# Start fresh (only required services)
 echo ""
 echo "[5/7] Iniciando containers do zero..."
-cd docker
-$COMPOSE_CMD --env-file ../.env up -d
-if [ $? -ne 0 ]; then
-    echo -e "  ${RED}❌ Falha ao iniciar containers${NC}"
+
+if [ -n "$REQUIRED_SERVICES" ]; then
+    cd docker
+    $COMPOSE_CMD --env-file ../.env up -d $REQUIRED_SERVICES
+    if [ $? -ne 0 ]; then
+        echo -e "  ${RED}❌ Falha ao iniciar containers${NC}"
+        cd ..
+        exit 1
+    fi
     cd ..
-    exit 1
+    echo -e "  ${GREEN}✅ Containers iniciados${NC}"
+else
+    echo -e "  ${GREEN}✅ Nenhum container Docker necessário${NC}"
+    echo "     Todos os serviços estão configurados como remotos."
 fi
-cd ..
-echo -e "  ${GREEN}✅ Containers iniciados${NC}"
 
 # Wait for services
 echo ""
 echo "[6/7] Aguardando serviços ficarem prontos..."
 
-if docker exec ai-server-redis redis-cli ping &> /dev/null; then
-    echo -e "  ${GREEN}✅ Redis pronto${NC}"
+if needs_docker_redis; then
+    sleep 3
+    if docker exec ai-server-redis-dev redis-cli ping &> /dev/null; then
+        echo -e "  ${GREEN}✅ Redis local pronto${NC}"
+    else
+        echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"
+    fi
 else
-    echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"
+    echo -e "  ${GREEN}✅ Redis remoto configurado${NC}"
 fi
 
 # Check API

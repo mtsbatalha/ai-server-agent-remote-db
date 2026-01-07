@@ -2,6 +2,7 @@
 
 # ============================================
 # AI Server Admin - Status Script
+# Com suporte a Smart Docker Scaling
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,7 +17,13 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+# Import hybrid detection functions
+source "$SCRIPT_DIR/docker-hybrid.sh"
+
 cd "$PROJECT_DIR"
+
+# Load environment variables
+load_env "$PROJECT_DIR"
 
 echo ""
 echo "========================================================================"
@@ -25,6 +32,12 @@ echo "========================================================================"
 echo " Data/Hora: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "========================================================================"
 echo ""
+
+# ============================================
+# SMART DOCKER SCALING - Detecção Híbrida
+# ============================================
+log_hybrid_status
+log_required_containers
 
 # ============================================
 # REMOTE DATABASE STATUS
@@ -85,42 +98,29 @@ else
         echo -e "   ${RED}❌ Docker não está rodando${NC}"
     else
         echo ""
-        printf "   %-22s %-16s %-14s %-10s\n" "Container" "Status" "Porta" "Health"
+        printf "   %-22s %-16s %-14s %-10s\n" "Container" "Status" "Porta" "Tipo"
         printf "   %-22s %-16s %-14s %-10s\n" "--------------------" "--------------" "------------" "--------"
 
         # Redis Status
         REDIS_STATUS="${RED}❌ Parado${NC}"
         REDIS_PORT="-"
-        REDIS_HEALTH="-"
+        REDIS_TYPE="-"
 
-        if docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
-            REDIS_STATUS="${GREEN}✅ Rodando${NC}"
-            REDIS_PORT="6380"
-            if docker exec ai-server-redis redis-cli ping &> /dev/null; then
-                REDIS_HEALTH="Healthy"
-            else
-                REDIS_HEALTH="Starting"
+        if needs_docker_redis; then
+            REDIS_TYPE="Local"
+            if docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
+                REDIS_STATUS="${GREEN}✅ Rodando${NC}"
+                REDIS_PORT="6380"
             fi
+        else
+            REDIS_STATUS="${GREEN}✅ Conectado${NC}"
+            REDIS_PORT="$(get_url_host "$REDIS_URL" | cut -d':' -f2)"
+            [ "$REDIS_PORT" = "$(get_url_host "$REDIS_URL")" ] && REDIS_PORT="6379"
+            REDIS_TYPE="Remoto"
         fi
 
         printf "   %-22s " "Redis"
-        echo -e "$REDIS_STATUS      $REDIS_PORT          $REDIS_HEALTH"
-        REDIS_STATUS="${RED}❌ Parado${NC}"
-        REDIS_PORT="-"
-        REDIS_HEALTH="-"
-
-        if docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
-            REDIS_STATUS="${GREEN}✅ Rodando${NC}"
-            REDIS_PORT="6380"
-            if docker exec ai-server-redis redis-cli ping &> /dev/null; then
-                REDIS_HEALTH="Healthy"
-            else
-                REDIS_HEALTH="Starting"
-            fi
-        fi
-
-        printf "   %-22s " "Redis"
-        echo -e "$REDIS_STATUS      $REDIS_PORT          $REDIS_HEALTH"
+        echo -e "$REDIS_STATUS      $REDIS_PORT          $REDIS_TYPE"
     fi
 fi
 
@@ -244,10 +244,10 @@ echo "------------------------------------------------------------------------"
 echo -e " ${BOLD}📜 LOGS RECENTES DOS CONTAINERS${NC}"
 echo "------------------------------------------------------------------------"
 
-if docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
+if needs_docker_redis && docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
     echo ""
     echo "   [Redis - Últimas 3 linhas]"
-    docker logs ai-server-redis --tail 3 2>&1 | sed 's/^/   /'
+    docker logs ai-server-redis-dev --tail 3 2>&1 | sed 's/^/   /'
 fi
 
 # ============================================
@@ -271,7 +271,14 @@ echo "========================================================================"
 TOTAL_SERVICES=3
 RUNNING_SERVICES=0
 
-docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q . && ((RUNNING_SERVICES++))
+# Count running services (including remote ones)
+if needs_docker_redis; then
+    docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q . && ((RUNNING_SERVICES++))
+else
+    # Remote Redis counts as running
+    ((RUNNING_SERVICES++))
+fi
+
 docker ps --filter "name=ai-server-api" --format "{{.Status}}" 2>/dev/null | grep -q . && ((RUNNING_SERVICES++))
 docker ps --filter "name=ai-server-web" --format "{{.Status}}" 2>/dev/null | grep -q . && ((RUNNING_SERVICES++))
 

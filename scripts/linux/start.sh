@@ -2,6 +2,7 @@
 
 # ============================================
 # AI Server Admin - Start Script
+# Com suporte a Smart Docker Scaling
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,7 +12,13 @@ PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m'
+
+# Import hybrid detection functions
+source "$SCRIPT_DIR/docker-hybrid.sh"
 
 cd "$PROJECT_DIR"
 
@@ -28,6 +35,9 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
+# Load environment variables
+load_env "$PROJECT_DIR"
+
 # Check for docker-compose or docker compose
 if command -v docker-compose &> /dev/null; then
     COMPOSE_CMD="docker-compose"
@@ -38,35 +48,53 @@ else
     exit 1
 fi
 
-# Start Docker containers
-echo "[1/2] Iniciando containers Docker..."
-cd docker
+# ============================================
+# SMART DOCKER SCALING - Detecção Híbrida
+# ============================================
+log_hybrid_status
+log_required_containers
 
-# First stop any existing containers (without removing volumes)
-$COMPOSE_CMD --env-file ../.env down 2>/dev/null
+# Get required services
+REQUIRED_SERVICES=$(get_required_services)
 
-# Start fresh
-$COMPOSE_CMD --env-file ../.env up -d
-if [ $? -ne 0 ]; then
-    echo -e "  ${RED}❌ Falha ao iniciar containers Docker${NC}"
-    echo "  Verifique se o Docker está rodando."
-    echo "  Se o problema persistir, execute: ./scripts/linux/reset.sh"
+# Start Docker containers (only what's needed)
+if [ -n "$REQUIRED_SERVICES" ]; then
+    echo "[1/2] Iniciando containers Docker..."
+    cd docker
+    
+    # First stop any existing containers (without removing volumes)
+    $COMPOSE_CMD --env-file ../.env down 2>/dev/null
+    
+    # Start only required services
+    $COMPOSE_CMD --env-file ../.env up -d $REQUIRED_SERVICES
+    if [ $? -ne 0 ]; then
+        echo -e "  ${RED}❌ Falha ao iniciar containers Docker${NC}"
+        echo "  Verifique se o Docker está rodando."
+        echo "  Se o problema persistir, execute: ./scripts/linux/reset.sh"
+        cd ..
+        exit 1
+    fi
     cd ..
-    exit 1
+    echo -e "  ${GREEN}✅ Containers Docker iniciados${NC}"
+else
+    echo -e "[1/2] ${GREEN}✅ Nenhum container Docker necessário${NC}"
+    echo "     Todos os serviços estão configurados como remotos."
 fi
-cd ..
-echo -e "  ${GREEN}✅ Containers Docker iniciados${NC}"
 
 # Wait for services to be ready
 echo ""
 echo "[2/2] Aguardando serviços ficarem prontos..."
 
-# Check Redis
-sleep 3
-if docker exec ai-server-redis redis-cli ping &> /dev/null; then
-    echo -e "  ${GREEN}✅ Redis pronto${NC}"
+# Check Redis (only if running locally)
+if needs_docker_redis; then
+    sleep 3
+    if docker exec ai-server-redis-dev redis-cli ping &> /dev/null; then
+        echo -e "  ${GREEN}✅ Redis local pronto${NC}"
+    else
+        echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"
+    fi
 else
-    echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"
+    echo -e "  ${GREEN}✅ Redis remoto configurado${NC}"
 fi
 
 # Check API
@@ -86,9 +114,14 @@ echo "  Backend:    http://localhost:3001"
 echo "  API Docs:   http://localhost:3001/api/docs"
 echo "===================================================="
 echo ""
-echo "Visualizando logs (pressione Ctrl+C para sair)..."
-echo ""
 
-cd docker
-$COMPOSE_CMD --env-file ../.env logs -f api web
-
+# Show logs only if there are local containers
+if [ -n "$REQUIRED_SERVICES" ]; then
+    echo "Visualizando logs (pressione Ctrl+C para sair)..."
+    echo ""
+    cd docker
+    $COMPOSE_CMD --env-file ../.env logs -f $REQUIRED_SERVICES
+else
+    echo -e "${GREEN}Sistema pronto! Todos os serviços são remotos.${NC}"
+    echo ""
+fi
