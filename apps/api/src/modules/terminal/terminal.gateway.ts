@@ -169,7 +169,7 @@ export class TerminalGateway implements OnGatewayConnection, OnGatewayDisconnect
                     cols,
                     rows,
                 },
-                (err, stream) => {
+                (err: Error | undefined, stream: ClientChannel) => {
                     if (err) {
                         this.logger.error(`Shell error: ${err.message}`);
                         client.emit('terminal-error', { message: err.message });
