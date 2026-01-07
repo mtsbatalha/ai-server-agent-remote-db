@@ -155,8 +155,13 @@ export default function DashboardPage() {
                     setProcessing(false);
 
                     // Auto-save chat session after execution completes
-                    if (selectedServer) {
-                        saveCurrentSession(selectedServer.id, selectedServer.name);
+                    // Use getState to avoid stale closure
+                    const currentServer = useServersStore.getState().selectedServer;
+                    const { saveCurrentSession } = useChatStore.getState();
+                    if (currentServer) {
+                        setTimeout(() => {
+                            saveCurrentSession(currentServer.id, currentServer.name);
+                        }, 100); // Small delay to ensure messages are updated
                     }
                 });
 
