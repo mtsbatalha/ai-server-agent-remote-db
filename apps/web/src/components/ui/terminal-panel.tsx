@@ -55,8 +55,8 @@ export function TerminalPanel({ serverId, serverName, onClose }: TerminalPanelPr
             const { FitAddon } = await import('@xterm/addon-fit');
             const { WebLinksAddon } = await import('@xterm/addon-web-links');
 
-            // Import CSS
-            await import('xterm/css/xterm.css');
+            // Import CSS using require (avoids type declaration issues)
+            require('xterm/css/xterm.css');
 
             if (!mounted || !terminalRef.current) return;
 
