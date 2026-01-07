@@ -153,6 +153,11 @@ export default function DashboardPage() {
                     });
                     setExecution(null);
                     setProcessing(false);
+
+                    // Auto-save chat session after execution completes
+                    if (selectedServer) {
+                        saveCurrentSession(selectedServer.id, selectedServer.name);
+                    }
                 });
 
                 socket.on('error', (data) => {
