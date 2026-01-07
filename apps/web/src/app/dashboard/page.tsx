@@ -20,7 +20,7 @@ import {
     MessageSquarePlus,
     Trash2,
     MessageCircle,
-    SquareTerminal,
+    TerminalSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -372,7 +372,7 @@ export default function DashboardPage() {
                                                 : 'hover:bg-secondary'
                                                 }`}
                                         >
-                                            <SquareTerminal className="h-3.5 w-3.5" />
+                                            <TerminalSquare className="h-3.5 w-3.5" />
                                             Terminal
                                         </button>
                                     </div>
