@@ -47,7 +47,7 @@ echo "------------------------------------------------------------------------"
 echo ""
 
 # Try to check database status via API health endpoint
-API_URL="http://localhost:3000/api/health/db"
+API_URL="http://localhost:3002/api/health/db"
 DB_STATUS="Desconhecido"
 DB_LATENCY="-"
 DB_HOST="-"
@@ -186,14 +186,14 @@ WEB_RUNNING=$(docker ps --filter "name=ai-server-web" --format "{{.Status}}" 2>/
 API_RUNNING=$(docker ps --filter "name=ai-server-api" --format "{{.Status}}" 2>/dev/null | grep -q "Up" && echo "yes")
 
 if [ -n "$WEB_RUNNING" ]; then
-    echo "   Frontend:     http://localhost:3000"
+    echo "   Frontend:     http://localhost:3002"
 else
     echo "   Frontend:     [NÃO DISPONÍVEL]"
 fi
 
 if [ -n "$API_RUNNING" ]; then
-    echo "   Backend API:  http://localhost:3000/api"
-    echo "   API Docs:     http://localhost:3000/api/docs"
+    echo "   Backend API:  http://localhost:3003/api"
+    echo "   API Docs:     http://localhost:3003/api/docs"
 else
     echo "   Backend API:  [NÃO DISPONÍVEL]"
     echo "   API Docs:     [NÃO DISPONÍVEL]"

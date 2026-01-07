@@ -188,14 +188,14 @@ if $REDIS_OK && $API_OK && $WEB_OK; then
     echo -e " ${GREEN}✅ TODOS OS SERVIÇOS RODANDO!${NC}"
     
     # Get actual ports from .env
-    API_PORT=$(grep "^API_HOST_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "3000")
-    WEB_PORT=$(grep "^WEB_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "3000")
+    API_PORT=$(grep "^API_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "3003")
+    WEB_PORT=$(grep "^WEB_PORT" .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "3002")
     
     echo ""
     echo " 📋 URLs disponíveis:"
-    echo "  Frontend:   http://localhost:${WEB_PORT:-3000}"
-    echo "  Backend:    http://localhost:${API_PORT:-3000}"
-    echo "  API Docs:   http://localhost:${API_PORT:-3000}/api/docs"
+    echo "  Frontend:   http://localhost:${WEB_PORT:-3002}"
+    echo "  Backend:    http://localhost:${API_PORT:-3003}"
+    echo "  API Docs:   http://localhost:${API_PORT:-3003}/api/docs"
 else
     echo -e " ${YELLOW}⚠️  Alguns serviços estão parados${NC}"
     echo ""
