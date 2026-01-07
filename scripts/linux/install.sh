@@ -272,7 +272,7 @@ echo ""
 echo -e "[8/8] Iniciando containers e configurando banco de dados..."
 
 cd docker
-$COMPOSE_CMD up -d
+$COMPOSE_CMD --env-file ../.env up -d
 cd ..
 echo -e "  ${GREEN}✅ Containers Docker iniciados${NC}"
 

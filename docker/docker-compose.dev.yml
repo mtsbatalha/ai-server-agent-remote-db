@@ -7,7 +7,7 @@ services:
   # ===========================================
   redis:
     image: redis:7-alpine
-    container_name: ai-server-redis-dev
+    container_name: ai-server-redis
     command: redis-server --appendonly yes
     ports:
       - "${REDIS_PORT:-6380}:6379"

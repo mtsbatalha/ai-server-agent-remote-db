@@ -146,7 +146,7 @@ echo "[6/7] Aguardando serviços ficarem prontos..."
 
 if needs_docker_redis; then
     sleep 3
-    if docker exec ai-server-redis-dev redis-cli ping &> /dev/null; then
+    if docker exec ai-server-redis redis-cli ping &> /dev/null; then
         echo -e "  ${GREEN}✅ Redis local pronto${NC}"
     else
         echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"

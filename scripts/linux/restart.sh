@@ -89,7 +89,7 @@ if [ -n "$REQUIRED_SERVICES" ]; then
     sleep 3
     
     if needs_docker_redis; then
-        if docker exec ai-server-redis-dev redis-cli ping &>/dev/null; then
+        if docker exec ai-server-redis redis-cli ping &>/dev/null; then
             echo -e "  ${GREEN}✅ Redis local pronto${NC}"
         else
             echo -e "  ${YELLOW}⚠️  Redis ainda iniciando...${NC}"
@@ -157,7 +157,7 @@ WEB_OK=false
 
 # Redis check
 if needs_docker_redis; then
-    if docker exec ai-server-redis-dev redis-cli ping &>/dev/null; then
+    if docker exec ai-server-redis redis-cli ping &>/dev/null; then
         echo -e "  Redis:       ${GREEN}✅ Rodando (Local)${NC}"
         REDIS_OK=true
     else

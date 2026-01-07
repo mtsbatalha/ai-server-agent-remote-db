@@ -37,7 +37,7 @@ services:
       # API always listens on 3001 internally
       API_PORT: 3001
       API_PORT_FALLBACK: "false"
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
       # AI Providers
       AI_PROVIDER: ${AI_PROVIDER:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -77,11 +77,11 @@ services:
     container_name: ai-server-web
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${WEB_PORT:-3000}
+      PORT: 3000
       # Internal Docker network always uses port 3001 (API internal port)
       NEXT_PUBLIC_API_URL: http://api:3001
     ports:
-      - "${WEB_PORT:-3000}:${WEB_PORT:-3000}"
+      - "${WEB_PORT:-3002}:3000"
     depends_on:
       api:
         condition: service_healthy

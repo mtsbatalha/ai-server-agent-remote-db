@@ -247,7 +247,7 @@ echo "------------------------------------------------------------------------"
 if needs_docker_redis && docker ps --filter "name=ai-server-redis" --format "{{.Status}}" 2>/dev/null | grep -q .; then
     echo ""
     echo "   [Redis - Últimas 3 linhas]"
-    docker logs ai-server-redis-dev --tail 3 2>&1 | sed 's/^/   /'
+    docker logs ai-server-redis --tail 3 2>&1 | sed 's/^/   /'
 fi
 
 # ============================================
